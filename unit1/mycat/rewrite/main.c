@@ -2,10 +2,11 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <stdio.h>
+#include <string.h>
 
 #define STDOUT 0
 #define STDIN 1
+#define STDERR 2
 #define BUFF_SIZE 256
 typedef char* string;
 
@@ -27,6 +28,13 @@ void printd(int descriptor, string message) {
 }
 
 /**
+* Write a given message to the stderr
+*/
+void error(string message) {
+    printd(STDERR, message);
+}
+
+/**
 *   Print a message to the stdout.
 */
 void print(string message) {
@@ -40,7 +48,10 @@ int main(int argc, char* argv[]) {
     }
     int inputfd = STDIN;
     if (argc != 1 && (inputfd = open(argv[1], O_RDONLY)) < 0) {
-        perror("An error ocurred while open file");
+        string errmsg = strerror(errno);
+        error("Error while opening file: ");
+        error(errmsg);
+        error("\n");
         return errno;
     }
     int readres;
