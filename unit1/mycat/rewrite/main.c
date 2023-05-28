@@ -4,8 +4,8 @@
 #include <errno.h>
 #include <string.h>
 
-#define STDOUT 0
-#define STDIN 1
+#define STDOUT 1
+#define STDIN 0
 #define STDERR 2
 #define BUFF_SIZE 256
 typedef char* string;
