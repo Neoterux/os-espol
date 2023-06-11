@@ -2,29 +2,31 @@ CC ?= gcc
 LD ?= ld
 CFLAGS ?= -Wall -Werror
 DFLAGS ?= -g -fsanitize=address
-LDFLAGS ?= -fsanitize=address 
-EXE = time
+LDFLAGS ?= -fsanitize=address
+EXE = build/time
 
 builddir:
 	mkdir -p build
 
-time.o: builddir
-	${CC} ${CFLAGS} ${DFLAGS} time.c -c -o build/time.o
+build/time.o: builddir
+	${CC} ${CFLAGS} ${DFLAGS} time.c -c -o $@
 
-tpiper.so: builddir
-	${CC} ${CFLAGS} ${DFLAGS} timepipe.c -shared -o build/tpiper.so
+build/tpiper.o: builddir
+	${CC} ${CFLAGS} ${DFLAGS} timepipe.c -c -o $@
 
-tshmm.so: builddir
-	${CC} ${CFLAGS} ${DFLAGS} timeshmm.c -shared -o build/tshmm.so
+build/tshmm.o: builddir
+	${CC} ${CFLAGS} ${DFLAGS} timeshmm.c -c -o $@
 
-${EXE}: tpiper.so tshmm.so time.o
-	${CC} ${LDFLAGS} build/tpiper.so build/time.o -o build/${EXE}p
-	${CC} ${LDFLAGS} build/tshmm.so build/time.o -o build/${EXE}s
+$(EXE)p: build/tpiper.o 
+	@echo Compiling pipe based executable
+	${CC} ${LDFLAGS} time.c $< -o $@
 
+$(EXE)s: build/tshmm.o
+	@echo Compiling shared memory based executable
+	${CC} ${LDFLAGS} time.c $< -o $@
 
-build: time-pipe time-shmm
-#	${LD} build/time-shmm.o build/timepipe.o -o build/${EXE}
+all: clean $(EXE)s $(EXE)p
 
 clean:
-	rm build/*
+	rm -rf build/*
 

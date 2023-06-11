@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <sys/time.h>
 #include <sys/wait.h>
-#include "comm.h"
+#include "message.h"
 
 #define EXIT_BAD_PROCESS -2
 #define EXIT_PROC_ERROR 3
@@ -25,7 +25,8 @@ int main(int argc, char *argv[]) {
     }
     struct timeval sys_start_time;
     gettimeofday(&sys_start_time, NULL);
-    queue_t *messages = prepare_queue(1);
+    init_comms(sizeof(struct timeval));
+    // queue_t *messages = prepare_queue(1);
     pid_t exec_pid = fork();
     // Start the background process
     if (exec_pid == 0) {
@@ -33,7 +34,8 @@ int main(int argc, char *argv[]) {
         char** nargv = argv + 1;
         struct timeval usr_start_time;
         gettimeofday(&usr_start_time, NULL);
-        queue_push(messages, &usr_start_time, sizeof(struct timeval));
+        send(&usr_start_time);
+        // queue_push(messages, &usr_start_time, sizeof(struct timeval));
         // Now run the exec
         if (run_executable(exec, nargv) == -1) {
             perror("An error ocurred while executing command: ");
@@ -46,16 +48,21 @@ int main(int argc, char *argv[]) {
     }
     int status;
     wait(&status);
-    struct timeval exec_stime;
-    int popr = queue_pop(messages, &exec_stime);
-    if (popr != 1) {
-        fprintf(stderr, "An error ocurred, the queue was empty");
-        exit(ERR_BAD_QUEUE);
-    }
-    queue_shutdown(messages);
+    // Initialize here to reduce allocation time
+    struct timeval sys_end_time, exec_stime;
+    gettimeofday(&sys_end_time, NULL);
+    
+    receive(&exec_stime);
+    shutdown_comms();
+    // int popr = queue_pop(messages, &exec_stime);
+    // if (popr != 1) {
+    //     fprintf(stderr, "An error ocurred, the queue was empty");
+    //     exit(ERR_BAD_QUEUE);
+    // }
+    // queue_shutdown(messages);
     printf("The status of the child: %d\n", status);
 
-    struct timeval sys_end_time;
-    gettimeofday(&sys_end_time, NULL);
-    printf("System time: %ldms\n", sys_end_time.tv_usec - sys_start_time.tv_usec);
+    
+    printf("Exec time: %ld µs\n", sys_end_time.tv_usec - exec_stime.tv_usec);
+    printf("System time: %ld µs\n", sys_end_time.tv_usec - sys_start_time.tv_usec);
 }

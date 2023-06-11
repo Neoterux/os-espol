@@ -1,30 +1,30 @@
-#include "comm.h"
+#include "message.h"
 #include <stddef.h>
+#include <unistd.h>
 
-struct queue {
-    unsigned int queue_mlen;
-    void** content;
-    unsigned int fill_size;
-    unsigned int _qpos;
+struct commstg_t {
+    size_t blksz;
+    int ctrnpipe[2];
 };
 
+struct commstg_t comm;
 
-queue_t* prepare_queue(const size_t len) {
-    return NULL;
+int init_comms(const size_t comblksz) {
+    int result = pipe(comm.ctrnpipe);
+    comm.blksz = comblksz;
+    return result;
 }
 
-int queue_pop(queue_t *queue, void *dest) {
-    return 0;
+void send(const void *message) {
+    write(comm.ctrnpipe[1], message, comm.blksz);
 }
 
-int queue_is_empty(const queue_t queue) {
-    return 0;
+int receive(void *message) {
+    return read(comm.ctrnpipe[0], message, comm.blksz);
 }
 
-int queue_push(queue_t *queue, void* value, size_t vsize) {
-    return 0;
-}
-
-int queue_shutdown(const queue_t *queue) {
-    return 0;
+int shutdown_comms() {
+    int outres = close(comm.ctrnpipe[0]);
+    int inres = close(comm.ctrnpipe[1]);
+    return outres < 0 ? outres : (inres < 0 ? inres : 0);
 }

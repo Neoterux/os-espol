@@ -1,3 +1,6 @@
+/**
+ * This code is deprecated for this work, would be worked better after.
+ */
 #ifndef COMMN_H
 #define COMMN_H
 #include <stdlib.h>
@@ -47,5 +50,5 @@ int queue_push(queue_t * queue, void* value, size_t vsize);
  * @param queue The queue to shutdown
  * @return 0 if there was not problem, other value otherwise
  *************************************************/
-int queue_shutdown(const queue_t *queue);
+int queue_shutdown(queue_t *queue);
 #endif
