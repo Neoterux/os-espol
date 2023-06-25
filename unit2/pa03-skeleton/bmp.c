@@ -1,10 +1,15 @@
 #include <stdlib.h>
 #include <stdio.h>
-
+#include <math.h>
+#include <string.h>
 #include "bmp.h"
+
+#define MIN_TWORKERS 4
+#define max(a, b) (a > b ? a : b)
 /* USE THIS FUNCTION TO PRINT ERROR MESSAGES
    DO NOT MODIFY THIS FUNCTION
 */
+
 void printError(int error){
   switch(error){
   case ARGUMENT_ERROR:
@@ -24,6 +29,8 @@ void printError(int error){
   }
 }
 
+#define BMP_HSIZE sizeof(BMP_Header)
+
 /* The input argument is the source file pointer. The function will first construct a BMP_Image image by allocating memory to it.
  * Then the function read the header from source image to the image's header.
  * Compute data size, width, height, and bytes_per_pixel of the image and stores them as image's attributes.
@@ -32,13 +39,39 @@ void printError(int error){
 */
 BMP_Image* createBMPImage(FILE* fptr) {
 
-  //Allocate memory for BMP_Image*;
+    //Allocate memory for BMP_Image*;
+    BMP_Image *image = malloc(sizeof(BMP_Image));
 
-  //Read the first 54 bytes of the source into the header
+    //Read the first 54 bytes of the source into the header
+    int readbytes = fread(&image->header, BMP_HSIZE, 1, fptr);
+    if (readbytes != 1) {
+        printError(VALID_ERROR);
+        exit(VALID_ERROR);
+    }
 
-  //Compute data size, width, height, and bytes per pixel;
+    //Compute data size, width, height, and bytes per pixel;
+    image->bytes_per_pixel = image->header.bits_per_pixel/8;
+    const int CPU_COUNT = max(getCPUCount() - 1, MIN_TWORKERS);
+    image->norm_height = ((int) ceil((float)image->header.height_px / (float)CPU_COUNT)) * CPU_COUNT;
 
-  //Allocate memory for image data
+    //Allocate memory for image data
+    const int ROW_COUNT = image->norm_height;
+    const int ROW_SIZE = image->header.width_px;
+    Pixel *content_buffer = calloc(ROW_SIZE * ROW_COUNT, sizeof(Pixel));
+    Pixel **matrix = malloc(sizeof(Pixel*) * ROW_COUNT);
+    image->pixels = matrix;
+    
+    Pixel buffer[ROW_SIZE];
+    const int ROWS_BYTES = ROW_SIZE * sizeof(Pixel);
+    for(int row = 0; row < ROW_COUNT; row++) {
+        Pixel *pixel_row = content_buffer + ROW_SIZE * row;
+        matrix[row] = pixel_row;
+        int r = fread(buffer, sizeof(Pixel), ROW_SIZE, fptr);
+        if (r)
+            memcpy(pixel_row, buffer, ROWS_BYTES);
+    }
+
+    return image;
 }
 
 /* The input arguments are the source file pointer, the image data pointer, and the size of image data.
@@ -52,6 +85,9 @@ void readImageData(FILE* srcFile, BMP_Image * image, int dataSize) {
  * The functions open the source file and call to CreateBMPImage to load de data image.
 */
 void readImage(FILE *srcFile, BMP_Image * dataImage) {
+    dataImage = createBMPImage(srcFile);
+    printBMPHeader(&dataImage->header);
+    exit(0);
 }
 
 /* The input arguments are the destination file name, and BMP_Image pointer.
@@ -110,4 +146,9 @@ void printBMPImage(BMP_Image* image) {
   printf("data size is %ld\n", sizeof(image->pixels));
   printf("norm_height size is %d\n", image->norm_height);
   printf("bytes per pixel is %d\n", image->bytes_per_pixel);
+}
+
+
+long getCPUCount() {
+    return sysconf(_SC_NPROCESSORS_ONLN);
 }
