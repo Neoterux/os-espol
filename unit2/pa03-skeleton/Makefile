@@ -1,5 +1,5 @@
 GCC = gcc
-CFLAGS = -Wall -Wshadow
+CFLAGS = -Wall -Wshadow -lm -g
 OBJS = ex5.o bmp.o
 
 ex5: $(OBJS)

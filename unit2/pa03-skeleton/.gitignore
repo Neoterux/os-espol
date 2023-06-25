@@ -1,3 +1,5 @@
 ex5x5.o
 bmp.o
 filter.o
+ex5
+./*.bmp
