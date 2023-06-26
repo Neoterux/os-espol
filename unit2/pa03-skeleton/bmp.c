@@ -43,7 +43,7 @@ BMP_Image* createBMPImage(FILE* fptr) {
     BMP_Image *image = malloc(sizeof(BMP_Image));
 
     //Read the first 54 bytes of the source into the header
-    int readbytes = fread(&image->header, BMP_HSIZE, 1, fptr);
+    int readbytes = fread(&image->header, HEADER_SIZE, 1, fptr);
     if (readbytes != 1) {
         printError(VALID_ERROR);
         exit(VALID_ERROR);
@@ -94,11 +94,33 @@ void readImage(FILE *srcFile, BMP_Image * dataImage) {
  * The function write the header and image data into the destination file.
 */
 void writeImage(char* destFileName, BMP_Image* dataImage) {
+    if (dataImage == NULL) {
+        printf("Invalid data to save");
+        exit(1);
+    }
+    FILE *output = fopen(destFileName, "wb");
+    if (output == NULL) {
+        perror("Couldn't save the content to the output file:");
+        exit(-4);
+    }
+    fwrite(&dataImage->header, HEADER_SIZE, 1, output);
+    const int ROW_LENGHT = dataImage->header.width_px;
+    const int ROWS = dataImage->header.height_px;
+    fwrite(dataImage->pixels[0], ROW_LENGHT, ROWS, output);
+    fclose(output);
 }
 
 /* The input argument is the BMP_Image pointer. The function frees memory of the BMP_Image.
 */
 void freeImage(BMP_Image* image) {
+    if (image == NULL) return;
+
+    if (image->pixels != NULL)
+        // Free matrix content
+        free(image->pixels[0]);
+    // Free matrix rows holder
+    free(image->pixels);
+    free(image);
 }
 
 /* The functions checks if the source image has a valid format.
