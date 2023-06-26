@@ -1,4 +1,5 @@
 #include "bmp.h"
+#include <stdint.h>
 
 void apply(BMP_Image * imageIn, BMP_Image * imageOut)
 {}
