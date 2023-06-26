@@ -41,6 +41,7 @@ BMP_Image* createBMPImage(FILE* fptr) {
 
     //Allocate memory for BMP_Image*;
     BMP_Image *image = malloc(sizeof(BMP_Image));
+    image->pixels = NULL;
 
     //Read the first 54 bytes of the source into the header
     int readbytes = fread(&image->header, HEADER_SIZE, 1, fptr);
@@ -50,26 +51,28 @@ BMP_Image* createBMPImage(FILE* fptr) {
     }
 
     //Compute data size, width, height, and bytes per pixel;
-    image->bytes_per_pixel = image->header.bits_per_pixel/8;
-    const int CPU_COUNT = max(getCPUCount() - 1, MIN_TWORKERS);
-    image->norm_height = ((int) ceil((float)image->header.height_px / (float)CPU_COUNT)) * CPU_COUNT;
+    image->bytes_per_pixel = image->header.bits_per_pixel / 8;
+    // const int CPU_COUNT = max(getCPUCount() - 1, MIN_TWORKERS);
+    image->norm_height = abs(image->header.height_px);
+    // image->norm_height = ((int) ceil((float)image->header.height_px / (float)CPU_COUNT)) * CPU_COUNT;
 
     //Allocate memory for image data
-    const int ROW_COUNT = image->norm_height;
-    const int ROW_SIZE = image->header.width_px;
-    Pixel *content_buffer = calloc(ROW_SIZE * ROW_COUNT, sizeof(Pixel));
-    Pixel **matrix = malloc(sizeof(Pixel*) * ROW_COUNT);
-    image->pixels = matrix;
+    readImageData(fptr, image, image->norm_height * image->header.width_px);
+    // const int ROW_COUNT = image->norm_height;
+    // const int ROW_SIZE = image->header.width_px;
+    // Pixel *content_buffer = calloc(ROW_SIZE * ROW_COUNT, sizeof(Pixel));
+    // Pixel **matrix = malloc(sizeof(Pixel*) * ROW_COUNT);
+    // image->pixels = matrix;
     
-    Pixel buffer[ROW_SIZE];
-    const int ROWS_BYTES = ROW_SIZE * sizeof(Pixel);
-    for(int row = 0; row < ROW_COUNT; row++) {
-        Pixel *pixel_row = content_buffer + ROW_SIZE * row;
-        matrix[row] = pixel_row;
-        int r = fread(buffer, sizeof(Pixel), ROW_SIZE, fptr);
-        if (r)
-            memcpy(pixel_row, buffer, ROWS_BYTES);
-    }
+    // Pixel buffer[ROW_SIZE];
+    // const int ROWS_BYTES = ROW_SIZE * sizeof(Pixel);
+    // for(int row = 0; row < ROW_COUNT; row++) {
+    //     Pixel *pixel_row = content_buffer + ROW_SIZE * row;
+    //     matrix[row] = pixel_row;
+    //     int r = fread(buffer, sizeof(Pixel), ROW_SIZE, fptr);
+    //     if (r)
+    //         memcpy(pixel_row, buffer, ROWS_BYTES);
+    // }
 
     return image;
 }
@@ -78,7 +81,16 @@ BMP_Image* createBMPImage(FILE* fptr) {
  * The functions reads data from the source into the image data matriz of pixels.
 */
 void readImageData(FILE* srcFile, BMP_Image * image, int dataSize) {
-
+    Pixel *data = calloc(dataSize, sizeof(Pixel));
+    const int PIXEL_ROWS = image->norm_height;
+    const int PIXEL_COLS = image->header.width_px;
+    Pixel **raw_image = malloc(PIXEL_ROWS * sizeof(Pixel*));
+    if (!feof(srcFile))
+        fread(data, sizeof(Pixel) * PIXEL_COLS, PIXEL_ROWS, srcFile);
+    for(int r = 0; r < PIXEL_ROWS; r++) {
+        raw_image[r] = data + r*PIXEL_COLS;
+    }
+    image->pixels = raw_image;
 }
 
 /* The input arguments are the pointer of the binary file, and the image data pointer.
