@@ -94,7 +94,7 @@ typedef struct BMP_Image {
 } BMP_Image;
 
 void printError(int error);
-BMP_Image* createBMPImage();
+BMP_Image* createBMPImage(FILE* fptr);
 void readImageData(FILE *srcFile, BMP_Image *dataImage, int dataSize);
 void readImage(FILE *srcFile, BMP_Image *dataImage);
 void writeImage(char* destFileName, BMP_Image* dataImage);

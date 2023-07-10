@@ -1,12 +1,14 @@
+#include "bmp.h"
+#include <semaphore.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "bmp.h"
-
+#include <time.h>
+#include "filter.h"
 
 #ifdef KITTY_IMAGE_OUTPUT
-#include <unistd.h>
 #include <sys/wait.h>
-void previewImage(char* src) {
+#include <unistd.h>
+void previewImage(char *src) {
     pid_t kitty_pid = fork();
     if (kitty_pid == 0) {
         char *args[] = {"/usr/bin/kitty", "+kitten", "icat", src, '\0'};
@@ -19,44 +21,59 @@ void previewImage(char* src) {
 }
 #endif
 
-int main(int argc, char **argv) {
-  FILE* source;
-  FILE* dest;
-  BMP_Image* image = NULL;
+sem_t plock;
 
-  if (argc != 3) {
-    printError(ARGUMENT_ERROR);
-    exit(EXIT_FAILURE);
-  }
-  
-  if((source = fopen(argv[1], "rb")) == NULL) {
-    printError(FILE_ERROR);
-    exit(EXIT_FAILURE);
-  }
-  if((dest = fopen(argv[2], "wb")) == NULL) {
-    printError(FILE_ERROR);
-    exit(EXIT_FAILURE);
-  } 
+int main(int argc, char **argv) {
+    FILE *source;
+    FILE *dest;
+    BMP_Image *image = NULL;
+
+    if (argc != 3) {
+        printError(ARGUMENT_ERROR);
+        exit(EXIT_FAILURE);
+    }
+    srand(time(NULL));
+    sem_init(&plock, 0, 1);
+
+    if ((source = fopen(argv[1], "rb")) == NULL) {
+        printError(FILE_ERROR);
+        exit(EXIT_FAILURE);
+    }
+    if ((dest = fopen(argv[2], "wb")) == NULL) {
+        printError(FILE_ERROR);
+        exit(EXIT_FAILURE);
+    }
 #ifdef KITTY_IMAGE_OUTPUT
     previewImage(argv[1]);
-#endif  
+#endif
 
-  readImage(source, image);
+    image = createBMPImage(source);
+    printBMPHeader(&image->header);
+    //   readImage(source, image);
 
-  if(!checkBMPValid(&image->header)) {
-    printError(VALID_ERROR);
-    exit(EXIT_FAILURE);
-  }
+#ifdef DEBUG_POINTERS
+    printf("[DEBUG] Pointer to readed image: %p\n", image);
+#endif
 
+    if (!checkBMPValid(&image->header)) {
+        printError(VALID_ERROR);
+        exit(EXIT_FAILURE);
+    }
+    rewind(source);
+    BMP_Image *imgdest = createBMPImage(source);
+    //   readImage(source, image);
+    printBMPHeader(&image->header);
+    printBMPImage(image);
+    apply(image, imgdest);
+    writeImage(argv[2], imgdest);
+    freeImage(image);
+    
+    fclose(source);
+    fclose(dest);
+#ifdef KITTY_IMAGE_OUTPUT
+    printf("The output is: \n");
+    previewImage(argv[2]);
+#endif
 
-
-  readImage(source, image);
-  printBMPHeader(&image->header);
-  printBMPImage(image);
-
-  freeImage(image);
-  fclose(source);
-  fclose(dest);
-
-  exit(EXIT_SUCCESS);
+    exit(EXIT_SUCCESS);
 }

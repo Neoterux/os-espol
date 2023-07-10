@@ -1,0 +1,10 @@
+CompileFlags:
+  Add:
+    - -Wall
+    - -Wshadow
+    - -lm
+    - -g
+    - -DKITTY_IMAGE_OUTPUT
+    - -DDEBUG_VERBOSE
+    
+  Compiler: gcc

@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -99,7 +100,7 @@ void readImageData(FILE* srcFile, BMP_Image * image, int dataSize) {
 void readImage(FILE *srcFile, BMP_Image * dataImage) {
     dataImage = createBMPImage(srcFile);
     printBMPHeader(&dataImage->header);
-    exit(0);
+    // exit(0);
 }
 
 /* The input arguments are the destination file name, and BMP_Image pointer.
@@ -115,10 +116,31 @@ void writeImage(char* destFileName, BMP_Image* dataImage) {
         perror("Couldn't save the content to the output file:");
         exit(-4);
     }
-    fwrite(&dataImage->header, HEADER_SIZE, 1, output);
-    const int ROW_LENGHT = dataImage->header.width_px;
+    
+#ifdef DEBUG_VERBOSE
+    const size_t nhdwritten = fwrite(&dataImage->header, HEADER_SIZE, 1, output);
+    printf("Writing image to file '%s'", destFileName);
+    printf("expected header size: %d, written: %ld\n", HEADER_SIZE, nhdwritten);
+#else
+    if (!fwrite(&dataImage->header, HEADER_SIZE, 1, output)) {
+        perror("Couldn't write to file: ");
+        exit(-1);
+    }
+#endif
+    const int ROW_LENGTH = dataImage->header.width_px;
     const int ROWS = dataImage->header.height_px;
-    fwrite(dataImage->pixels[0], ROW_LENGHT, ROWS, output);
+    size_t datawritten = 0;
+    for(int row = 0; row < ROWS; row++) {
+        datawritten += fwrite(dataImage->pixels[row], sizeof(Pixel), ROW_LENGTH, output) * sizeof(Pixel);
+    }
+#ifdef DEBUG_VERBOSE
+    const size_t total_data_size = ROW_LENGTH * ROWS * sizeof(Pixel);
+    printf("attempted to write image (%dx%d): %ld bytes\n", dataImage->header.width_px, dataImage->norm_height, total_data_size);
+    printf("written: %ld byte\n", datawritten);
+    if(datawritten != total_data_size) {
+        printf("Err: Something failed while writing image, incomplete writting");
+    }
+#endif
     fclose(output);
 }
 
@@ -142,18 +164,30 @@ void freeImage(BMP_Image* image) {
 int checkBMPValid(BMP_Header* header) {
   // Make sure this is a BMP file
   if (header->type != 0x4d42) {
+    #ifdef DEBUG_VERBOSE
+    printf("[DEBUG] The given header is not valid (read: %x, expected: %x)\n", header->type, 0x42d42);
+    #endif
     return FALSE;
   }
   // Make sure we are getting 24 bits per pixel
   if (header->bits_per_pixel != 24) {
+    #ifdef DEBUG_VERBOSE
+    printf("[DEBUG] The given header doesn't seems to contains 24 bits per pixel\n");
+    #endif
     return FALSE;
   }
   // Make sure there is only one image plane
   if (header->planes != 1) {
+    #ifdef DEBUG_VERBOSE
+    printf("[DEBUG] The given header seems to have more than 1 plane\n");
+    #endif
     return FALSE;
   }
   // Make sure there is no compression
   if (header->compression != 0) {
+    #ifdef DEBUG_VERBOSE
+    printf("[DEBUG] It seems that the given image has compression\n");
+    #endif
     return FALSE;
   }
   return TRUE;

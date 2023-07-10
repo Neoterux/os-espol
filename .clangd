@@ -1,0 +1,6 @@
+CompileFlags:
+  Add:
+    - -Wall
+  Remove:
+    - -Wpragma-pack
+  Compiler: gcc
