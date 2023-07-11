@@ -56,7 +56,7 @@ void print_matrix(int matrix[3][3]) {
 
 void copy_data(const BMP_Image *in, channel_t channel, int target[3][3], int i, int j) {
     for(int row = 0; row < 3; row++) {
-        if (i+row >= in->header.height_px) {
+        if (i+row >= in->norm_height) {
             target[row][0] = -1;
             target[row][1] = -1;
             target[row][2] = -1;
@@ -110,6 +110,7 @@ void apply_conv(const int input[3][3], int output[3][3], int matrix[3][3], int f
     for(int row = 0; row < 3; row++) {
         for(int col = 0; col < 3; col++) {
             int acc = 0;
+            // For some stupid reason this stop working
             for(int ofr = max(row-1, 0); ofr <= min(2, row + 1); ofr++) 
                 for(int ofc = max(col - 1, 0); ofc <= min(2, col + 1); ofc++) {
                     acc += input[ofr][ofc] * matrix[row][col];
@@ -136,9 +137,9 @@ void apply(BMP_Image * imageIn, BMP_Image * imageOut)
     int conv[3][3] = {{0}, {0},{0}};
     print_matrix(subpxls);
     printf("After copying data: \n");
-    copy_data(imageIn, RED, subpxls, 0, 0);
+    copy_data(imageIn, RED, subpxls, 1, 1);
     print_matrix(subpxls);
-    apply_conv(subpxls, conv);
+    apply_simple_conv(subpxls, conv, 9);
     printf("After applying convolution: \n");
     print_matrix(conv);
 #endif
