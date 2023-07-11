@@ -15,6 +15,9 @@ clean:
 test: ex5
 	./ex5 testcases/test.bmp outputs/test_out.bmp
 	diff outputs/test_out.bmp testcases/test_sol.bmp
+
+custom:
+	env PFLAGS='-g -DDEBUG_VERBOSE -DTHREADED_APPLY_PRETEST' make ex5
 	
 testmem: ex5
 	valgrind --tool=memcheck --leak-check=summary ./ex5 testcases/test.bmp outputs/test_out.bmp	

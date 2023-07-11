@@ -6,5 +6,6 @@ CompileFlags:
     - -g
     - -DKITTY_IMAGE_OUTPUT
     - -DDEBUG_VERBOSE
+    - -DTHREADED_APPLY_PRETEST
     
   Compiler: gcc
