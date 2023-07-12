@@ -3,3 +3,4 @@ bmp.o
 filter.o
 ex5
 ./*.bmp
+outputs/*

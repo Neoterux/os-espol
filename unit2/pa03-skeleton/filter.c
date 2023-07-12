@@ -1,9 +1,11 @@
 #include "bmp.h"
+#include <bits/pthreadtypes.h>
 #include <stddef.h>
 #include <semaphore.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <unistd.h>
 
 #define max(a, b) (a > b ? a : b)
@@ -42,6 +44,18 @@ int acquire_id() {
 }
 
 void *filterThreadWorker(void * args);
+
+void tprintf(char *format, ...) {
+    sem_wait(&plock);
+    pthread_t tid = pthread_self();
+    printf("[t=%ld]", tid);
+    va_list argp;
+    va_start(argp, format);
+    vprintf(format, argp);
+    va_end(argp);
+
+    sem_post(&plock);
+}
 
 void print_matrix(int matrix[3][3]) {
     sem_wait(&plock);
@@ -89,15 +103,19 @@ void copy_data(const BMP_Image *in, channel_t channel, int target[3][3], int i, 
 
 void commit(BMP_Image *target, channel_t channel, int origin[3][3], int i, int j, uint8_t offset_r, uint8_t offset_c) {
     for(int row = offset_r; row < 3; row++) {
+        if (i + row - offset_r >= target->norm_height) {
+            tprintf("[WARN] a commit for out of bound reached.\n");
+            break;
+        }
         for(int col = offset_c; col < 3; col++) {
             if ((i + row - offset_r) < 0) {
-                printf("ERR: The calculus for the real pixel was wrong: { i: %d, row: %d, offset_r: %u }\n", i, row, offset_r);
+                tprintf("ERR: The calculus for the real pixel was wrong: { i: %d, row: %d, offset_r: %u }\n", i, row, offset_r);
             }
             if ((i + row - offset_r) > target->header.width_px) {
-                printf("\n");
+                tprintf("\n");
             }
             if ((j + col - offset_c) < 0) {
-                printf("ERR: The calculus for the real pixel was wrong: { j: %d, col: %d, offset_c: %u }\n", j, col, offset_c);
+                tprintf("ERR: The calculus for the real pixel was wrong: { j: %d, col: %d, offset_c: %u }\n", j, col, offset_c);
             }
             switch (channel) {
                 case BLUE:
@@ -107,6 +125,7 @@ void commit(BMP_Image *target, channel_t channel, int origin[3][3], int i, int j
                 target->pixels[i + row - offset_r][j+col - offset_c].green = origin[row][col];
                 break;
                 case RED:
+                // tprintf("image_dim:: {%dx%d}, commiting on red channel for pixel (%d, %d)\n", target->header.width_px, target->norm_height, i + row - offset_r, j+col - offset_c);
                 target->pixels[i + row - offset_r][j+col - offset_c].red = origin[row][col];
                 break;
                 default:

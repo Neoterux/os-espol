@@ -20,4 +20,4 @@ custom:
 	env PFLAGS='-g -DDEBUG_VERBOSE -DTHREADED_APPLY_PRETEST' make ex5
 	
 testmem: ex5
-	valgrind --tool=memcheck --leak-check=summary ./ex5 testcases/test.bmp outputs/test_out.bmp	
+	valgrind --tool=memcheck --leak-check=summary ./ex5 testcases/airplane.bmp outputs/test_out.bmp	
