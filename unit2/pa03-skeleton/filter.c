@@ -69,12 +69,22 @@ void print_matrix(int matrix[3][3]) {
     sem_post(&plock);
 }
 
+void zero_matrix(int target[3][3]) {
+    for (int i = 0; i < 3; i++) {
+        for(int j = 0; j < 3; j++) {
+            target[i][j] = 0;
+        }
+    }
+}
+
 void copy_data(const BMP_Image *in, channel_t channel, int target[3][3], int i, int j) {
+
+#ifdef OLD_METHOD
     for(int row = 0; row < 3; row++) {
         if (i+row >= in->norm_height) {
-            target[row][0] = -1;
-            target[row][1] = -1;
-            target[row][2] = -1;
+            target[row][0] = 0;
+            target[row][1] = 0;
+            target[row][2] = 0;
             break;
         }
         for (int col = 0; col < 3; col++) {
@@ -99,40 +109,56 @@ void copy_data(const BMP_Image *in, channel_t channel, int target[3][3], int i, 
             
         }
     }
+#else
+    zero_matrix(target);
+    for (int row )
+
+#endif
 }
 
 void commit(BMP_Image *target, channel_t channel, int origin[3][3], int i, int j, uint8_t offset_r, uint8_t offset_c) {
-    for(int row = offset_r; row < 3; row++) {
-        if (i + row - offset_r >= target->norm_height) {
-            tprintf("[WARN] a commit for out of bound reached.\n");
-            break;
-        }
-        for(int col = offset_c; col < 3; col++) {
-            if ((i + row - offset_r) < 0) {
-                tprintf("ERR: The calculus for the real pixel was wrong: { i: %d, row: %d, offset_r: %u }\n", i, row, offset_r);
-            }
-            if ((i + row - offset_r) > target->header.width_px) {
-                tprintf("\n");
-            }
-            if ((j + col - offset_c) < 0) {
-                tprintf("ERR: The calculus for the real pixel was wrong: { j: %d, col: %d, offset_c: %u }\n", j, col, offset_c);
-            }
-            switch (channel) {
-                case BLUE:
-                target->pixels[i + row - offset_r][j+col - offset_c].blue = origin[row][col];
-                break;
-                case GREEN:
-                target->pixels[i + row - offset_r][j+col - offset_c].green = origin[row][col];
-                break;
-                case RED:
-                // tprintf("image_dim:: {%dx%d}, commiting on red channel for pixel (%d, %d)\n", target->header.width_px, target->norm_height, i + row - offset_r, j+col - offset_c);
-                target->pixels[i + row - offset_r][j+col - offset_c].red = origin[row][col];
-                break;
-                default:
-                break;
-            }
-        }
+    switch(channel) {
+        case BLUE:
+        target->pixels[i][j].blue = origin[1][1];
+        break;
+        case GREEN:
+        target->pixels[i][j].green = origin[1][1];
+        break;
+        case RED:
+        target->pixels[i][j].red = origin[1][1];
+        break;
     }
+    // for(int row = offset_r; row < 3; row++) {
+    //     if (i + row - offset_r >= target->norm_height) {
+    //         tprintf("[WARN] a commit for out of bound reached for segment [i: %d, j: %d]\n\t{ normalized_row: %d, normalized_column: %d }.\n", i, j, i + row - offset_r, j - offset_c);
+    //         break;
+    //     }
+    //     for(int col = offset_c; col < 3; col++) {
+    //         if ((i + row - offset_r) < 0) {
+    //             tprintf("ERR: The calculus for the real pixel was wrong: { i: %d, row: %d, offset_r: %u }\n", i, row, offset_r);
+    //         }
+    //         if ((i + row - offset_r) > target->header.width_px) {
+    //             tprintf("\n");
+    //         }
+    //         if ((j + col - offset_c) < 0) {
+    //             tprintf("ERR: The calculus for the real pixel was wrong: { j: %d, col: %d, offset_c: %u }\n", j, col, offset_c);
+    //         }
+    //         switch (channel) {
+    //             case BLUE:
+    //             target->pixels[i + row - offset_r][j+col - offset_c].blue = origin[row][col];
+    //             break;
+    //             case GREEN:
+    //             target->pixels[i + row - offset_r][j+col - offset_c].green = origin[row][col];
+    //             break;
+    //             case RED:
+    //             // tprintf("image_dim:: {%dx%d}, commiting on red channel for pixel (%d, %d)\n", target->header.width_px, target->norm_height, i + row - offset_r, j+col - offset_c);
+    //             target->pixels[i + row - offset_r][j+col - offset_c].red = origin[row][col];
+    //             break;
+    //             default:
+    //             break;
+    //         }
+    //     }
+    // }
 }
 
 void apply_conv(const int input[3][3], int output[3][3], int matrix[3][3], int factor) {
@@ -221,6 +247,9 @@ void apply(BMP_Image * imageIn, BMP_Image * imageOut)
 void applyParallel(BMP_Image * imageIn, BMP_Image * imageOut, int boxFilter[3][3], int numThreads)
 {}
 
+/**
+* Prevent that the calculated values overwrite another pixels that need more context
+*/
 void *filterThreadWorker(void * args) {
     worker_arg_t settings = *(worker_arg_t*) args;
     pthread_t id = acquire_id();
@@ -284,16 +313,17 @@ void *filterThreadWorker(void * args) {
             int real_col = col;
             int working_row = max(START_ROW + row - 1, 0);
             int working_col = max(col - 1, 0);
+            #define FACTOR 8
             copy_data(settings.src, RED, original, working_row, max(col - 1, 0));
-            apply_simple_conv(original, targt, 0);
+            apply_simple_conv(original, targt, FACTOR);
             commit(settings.dest, RED, targt, real_row, real_col, diff(real_row, working_row), diff(real_col, working_col));
             // Now apply convolution to the green channel
             copy_data(settings.src, GREEN, original, working_row, max(col, 1));
-            apply_simple_conv(original, targt, 0);
+            apply_simple_conv(original, targt, FACTOR);
             commit(settings.dest, GREEN, targt, real_row, real_col, diff(real_row, working_row), diff(real_col, working_col));
             // Now apply convolution for the blue
             copy_data(settings.src, BLUE, original, working_row, max(col, 1));
-            apply_simple_conv(original, targt, 0);
+            apply_simple_conv(original, targt, FACTOR);
             commit(settings.dest, BLUE, targt, real_row, real_col, diff(real_row, working_row), diff(real_col, working_col));
             
 #endif
