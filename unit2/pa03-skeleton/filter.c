@@ -111,7 +111,30 @@ void copy_data(const BMP_Image *in, channel_t channel, int target[3][3], int i, 
     }
 #else
     zero_matrix(target);
-    for (int row )
+    // There are offsets
+    int row = i == 0 ? 0 : -1;
+    const int max_row = j < (in->norm_height - 1) ? 2 : 1;
+    
+    const int max_col = i < (in->header.width_px - 1) ? 2 : 1;
+    for (; row < max_row; row++) {
+        int col = j == 0 ? 0 : -1;
+        for (; col < max_col; col++) {
+            switch(channel){ 
+                case BLUE:
+                target[row + 1][col + 1] = in->pixels[i + row][j + col].blue;
+                break;
+                case GREEN:
+                target[row + 1][col + 1] = in->pixels[i + row][j + col].green;
+                break;
+                case RED:
+                target[row + 1][col + 1] = in->pixels[i + row][j + col].red;
+                break;
+                default:
+                break;
+            }
+            
+        }
+    }
 
 #endif
 }
@@ -162,6 +185,8 @@ void commit(BMP_Image *target, channel_t channel, int origin[3][3], int i, int j
 }
 
 void apply_conv(const int input[3][3], int output[3][3], int matrix[3][3], int factor) {
+
+#ifdef OLD_METHOD
     for(int row = 0; row < 3; row++) {
         for(int col = 0; col < 3; col++) {
             int acc = 0;
@@ -175,6 +200,15 @@ void apply_conv(const int input[3][3], int output[3][3], int matrix[3][3], int f
             output[row][col] = acc/(factor == 0 ? counter : factor);
         }
     }
+#else
+    int acc = 0;
+    for(int row = 0; row < 3; row++){
+        for (int col = 0; col < 3; col++) {
+            acc += input[row][col] * matrix[row][col];
+        }
+    }
+    output[1][1] = acc/factor;
+#endif
 }
 
 void apply_simple_conv(const int input[3][3], int output[3][3], int factor) {
@@ -254,36 +288,30 @@ void *filterThreadWorker(void * args) {
     worker_arg_t settings = *(worker_arg_t*) args;
     pthread_t id = acquire_id();
     printf("worker thread with id: %ld started \r\n", id);
-#ifdef DEBUG_VERBOSE
-    if (settings.skip) {
-        printf("The thread %ld was set to skip filter\n", id);
-        return NULL;
-    }
-#endif
     const int IMAGE_PWIDTH = settings.src->header.width_px;
-    // const int IMAGE_PHEIGHT = settings.src->norm_height;
-    BMP_Image *target = settings.dest;
-    Pixel **source = settings.src->pixels;
+    // BMP_Image *target = settings.dest;
+    // Pixel **source = settings.src->pixels;
     const int START_ROW = settings.init_row;
-    const double factor = settings.factor;
+    const int END_ROW = min(START_ROW + settings.row_count, );
+    // const double factor = settings.factor;
 
-#ifndef SOLUTION_1
-#define next(var) (var++)
+
+#ifdef SOLUTION_1
+    int row = 0
 #else
-#define next(var) var++
+    int row = START_ROW;
 #endif
 
     // Pixel box[3][3];
-    for (int row = 0; row < settings.row_count; next(row)) {
+    for (; row < END_ROW; row++) {
 #ifdef SOLUTION_1
         const int REAL_ROW = START_ROW + row;
         const int start_y = REAL_ROW == 0 ? 0 : -1;
         const int max_y = REAL_ROW == IMAGE_PWIDTH ? 0 : 1;
         const int diff_y = max_y - start_y + 1;
-#else
-    // if (row == 0 || row == settings.row_count - 1) continue;
+
 #endif
-        for (int col = 0; col < IMAGE_PWIDTH-1; col++) {
+        for (int col = 0; col < IMAGE_PWIDTH; col++) {
 #ifdef SOLUTION_1
             const int start_x = -1 * (col > 0);
             const int max_x = col < (IMAGE_PWIDTH - 1);
@@ -309,22 +337,22 @@ void *filterThreadWorker(void * args) {
             int original[3][3];
             int targt[3][3];
             // Start calculating values from the previous row if possible
-            int real_row = START_ROW + row;
-            int real_col = col;
-            int working_row = max(START_ROW + row - 1, 0);
-            int working_col = max(col - 1, 0);
-            #define FACTOR 8
-            copy_data(settings.src, RED, original, working_row, max(col - 1, 0));
+            // int real_row = START_ROW + row;
+            // int real_col = col;
+            // int working_row = max(START_ROW + row - 1, 0);
+            // int working_col = max(col - 1, 0);
+            #define FACTOR 9
+            copy_data(settings.src, RED, original, row, col);
             apply_simple_conv(original, targt, FACTOR);
-            commit(settings.dest, RED, targt, real_row, real_col, diff(real_row, working_row), diff(real_col, working_col));
+            commit(settings.dest, RED, targt, row, col, 0, 0);
             // Now apply convolution to the green channel
-            copy_data(settings.src, GREEN, original, working_row, max(col, 1));
+            copy_data(settings.src, GREEN, original, row, col);
             apply_simple_conv(original, targt, FACTOR);
-            commit(settings.dest, GREEN, targt, real_row, real_col, diff(real_row, working_row), diff(real_col, working_col));
+            commit(settings.dest, GREEN, targt, row, col, 0, 0);
             // Now apply convolution for the blue
-            copy_data(settings.src, BLUE, original, working_row, max(col, 1));
+            copy_data(settings.src, BLUE, original, row, col);
             apply_simple_conv(original, targt, FACTOR);
-            commit(settings.dest, BLUE, targt, real_row, real_col, diff(real_row, working_row), diff(real_col, working_col));
+            commit(settings.dest, BLUE, targt, row, col, 0, 0);
             
 #endif
         }

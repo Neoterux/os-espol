@@ -86,8 +86,10 @@ void readImageData(FILE* srcFile, BMP_Image * image, int dataSize) {
     const int PIXEL_ROWS = image->norm_height;
     const int PIXEL_COLS = image->header.width_px;
     Pixel **raw_image = malloc(PIXEL_ROWS * sizeof(Pixel*));
-    if (!feof(srcFile))
-        fread(data, sizeof(Pixel) * PIXEL_COLS, PIXEL_ROWS, srcFile);
+    Pixel *cpixelptr = data;
+    while (!feof(srcFile)) {
+        fread(cpixelptr++, image->bytes_per_pixel, 1, srcFile);
+    }
     for(int r = 0; r < PIXEL_ROWS; r++) {
         raw_image[r] = data + r*PIXEL_COLS;
     }
@@ -128,10 +130,13 @@ void writeImage(char* destFileName, BMP_Image* dataImage) {
     }
 #endif
     const int ROW_LENGTH = dataImage->header.width_px;
-    const int ROWS = dataImage->header.height_px;
+    const int ROWS = dataImage->norm_height;
     size_t datawritten = 0;
     for(int row = 0; row < ROWS; row++) {
-        datawritten += fwrite(dataImage->pixels[row], sizeof(Pixel), ROW_LENGTH, output) * sizeof(Pixel);
+        for (int pixel = 0; pixel < ROW_LENGTH; pixel++) {
+            datawritten += fwrite(&dataImage->pixels[row][pixel], dataImage->bytes_per_pixel, 1, output);
+        }
+        // datawritten += fwrite(dataImage->pixels[row], sizeof(Pixel), ROW_LENGTH, output) * sizeof(Pixel);
     }
 #ifdef DEBUG_VERBOSE
     const size_t total_data_size = ROW_LENGTH * ROWS * sizeof(Pixel);
