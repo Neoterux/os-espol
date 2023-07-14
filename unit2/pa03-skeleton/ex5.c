@@ -48,7 +48,9 @@ int main(int argc, char **argv) {
 #endif
 
     image = createBMPImage(source);
+    #ifdef VERBOSE_THREAD
     printBMPHeader(&image->header);
+    #endif
     //   readImage(source, image);
 
 #ifdef DEBUG_POINTERS
@@ -61,9 +63,10 @@ int main(int argc, char **argv) {
     }
     rewind(source);
     BMP_Image *imgdest = createBMPImage(source);
-    //   readImage(source, image);
+    #ifdef VERBOSE_THREAD
     printBMPHeader(&image->header);
     printBMPImage(image);
+    #endif
     apply(image, imgdest);
     writeImage(argv[2], imgdest);
     freeImage(image);

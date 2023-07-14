@@ -55,25 +55,10 @@ BMP_Image* createBMPImage(FILE* fptr) {
     image->bytes_per_pixel = image->header.bits_per_pixel / 8;
     // const int CPU_COUNT = max(getCPUCount() - 1, MIN_TWORKERS);
     image->norm_height = abs(image->header.height_px);
-    // image->norm_height = ((int) ceil((float)image->header.height_px / (float)CPU_COUNT)) * CPU_COUNT;
 
     //Allocate memory for image data
     readImageData(fptr, image, image->norm_height * image->header.width_px);
-    // const int ROW_COUNT = image->norm_height;
-    // const int ROW_SIZE = image->header.width_px;
-    // Pixel *content_buffer = calloc(ROW_SIZE * ROW_COUNT, sizeof(Pixel));
-    // Pixel **matrix = malloc(sizeof(Pixel*) * ROW_COUNT);
-    // image->pixels = matrix;
-    
-    // Pixel buffer[ROW_SIZE];
-    // const int ROWS_BYTES = ROW_SIZE * sizeof(Pixel);
-    // for(int row = 0; row < ROW_COUNT; row++) {
-    //     Pixel *pixel_row = content_buffer + ROW_SIZE * row;
-    //     matrix[row] = pixel_row;
-    //     int r = fread(buffer, sizeof(Pixel), ROW_SIZE, fptr);
-    //     if (r)
-    //         memcpy(pixel_row, buffer, ROWS_BYTES);
-    // }
+
 
     return image;
 }
@@ -120,7 +105,7 @@ void writeImage(char* destFileName, BMP_Image* dataImage) {
     }
     
 #ifdef DEBUG_VERBOSE
-    const size_t nhdwritten = fwrite(&dataImage->header, HEADER_SIZE, 1, output);
+    const size_t nhdwritten = fwrite(&dataImage->header, HEADER_SIZE, 1, output) * HEADER_SIZE;
     printf("Writing image to file '%s'", destFileName);
     printf("expected header size: %d, written: %ld\n", HEADER_SIZE, nhdwritten);
 #else

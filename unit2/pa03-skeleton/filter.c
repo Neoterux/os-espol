@@ -219,8 +219,6 @@ void apply(BMP_Image * imageIn, BMP_Image * imageOut)
 
     const int EXPECTED_ROW_PER_THREAD = left_image_rows / total_threads;
 
-    const double EXPECTED_FACTOR = (double)random() / RAND_MAX;
-    printf("[INFO] Using the factor as %lf\n", EXPECTED_FACTOR);
 
     int rowstoscan = 0;
 
@@ -231,7 +229,6 @@ void apply(BMP_Image * imageIn, BMP_Image * imageOut)
         thread_args->init_col = 0;
         thread_args->row_count = (i == (total_threads - 1)) ? left_image_rows : EXPECTED_ROW_PER_THREAD;
         thread_args->init_row = i * EXPECTED_ROW_PER_THREAD;
-        thread_args->factor = EXPECTED_FACTOR;
         left_image_rows -= EXPECTED_ROW_PER_THREAD;
         rowstoscan += thread_args->row_count;
         pthread_create(&threads[i], NULL, &filterThreadWorker, thread_args);
@@ -256,8 +253,10 @@ void applyParallel(BMP_Image * imageIn, BMP_Image * imageOut, int boxFilter[3][3
 */
 void *filterThreadWorker(void * args) {
     worker_arg_t settings = *(worker_arg_t*) args;
+    #ifdef VERBOSE_THREAD
     pthread_t id = acquire_id();
     printf("worker thread with id: %ld started \r\n", id);
+    #endif
     const int IMAGE_PWIDTH = settings.src->header.width_px;
     // BMP_Image *target = settings.dest;
     // Pixel **source = settings.src->pixels;
