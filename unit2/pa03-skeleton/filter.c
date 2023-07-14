@@ -120,7 +120,6 @@ void copy_data(const BMP_Image *in, channel_t channel, int target[3][3], int i, 
     
     for (; row < max_row; row++) {
         for (int col = init_col; col < max_col; col++) {
-            tprintf(" { i: %d, j: %d } [ r: %d, c: %d] row_offset: %d  => max_offset: %d | col_offset: %d => max_offset: %d\n", i, j, i+row, i+col, row, max_row-1, col, max_col-1);
             switch(channel){ 
                 case BLUE:
                 target[row + 1][col + 1] = in->pixels[i + row][j + col].blue;
@@ -153,37 +152,6 @@ void commit(BMP_Image *target, channel_t channel, int origin[3][3], int i, int j
         target->pixels[i][j].red = origin[1][1];
         break;
     }
-    // for(int row = offset_r; row < 3; row++) {
-    //     if (i + row - offset_r >= target->norm_height) {
-    //         tprintf("[WARN] a commit for out of bound reached for segment [i: %d, j: %d]\n\t{ normalized_row: %d, normalized_column: %d }.\n", i, j, i + row - offset_r, j - offset_c);
-    //         break;
-    //     }
-    //     for(int col = offset_c; col < 3; col++) {
-    //         if ((i + row - offset_r) < 0) {
-    //             tprintf("ERR: The calculus for the real pixel was wrong: { i: %d, row: %d, offset_r: %u }\n", i, row, offset_r);
-    //         }
-    //         if ((i + row - offset_r) > target->header.width_px) {
-    //             tprintf("\n");
-    //         }
-    //         if ((j + col - offset_c) < 0) {
-    //             tprintf("ERR: The calculus for the real pixel was wrong: { j: %d, col: %d, offset_c: %u }\n", j, col, offset_c);
-    //         }
-    //         switch (channel) {
-    //             case BLUE:
-    //             target->pixels[i + row - offset_r][j+col - offset_c].blue = origin[row][col];
-    //             break;
-    //             case GREEN:
-    //             target->pixels[i + row - offset_r][j+col - offset_c].green = origin[row][col];
-    //             break;
-    //             case RED:
-    //             // tprintf("image_dim:: {%dx%d}, commiting on red channel for pixel (%d, %d)\n", target->header.width_px, target->norm_height, i + row - offset_r, j+col - offset_c);
-    //             target->pixels[i + row - offset_r][j+col - offset_c].red = origin[row][col];
-    //             break;
-    //             default:
-    //             break;
-    //         }
-    //     }
-    // }
 }
 
 void apply_conv(const int input[3][3], int output[3][3], int matrix[3][3], int factor) {
