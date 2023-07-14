@@ -10,7 +10,7 @@
 
 #define max(a, b) (a > b ? a : b)
 #define min(a, b) (a < b ? a : b)
-#define abs(a) max(a, -a)
+#define abs(a) (a < 0 ? -a : a)
 #define diff(a, b) abs(a - b)
 extern sem_t plock;
 
@@ -113,12 +113,14 @@ void copy_data(const BMP_Image *in, channel_t channel, int target[3][3], int i, 
     zero_matrix(target);
     // There are offsets
     int row = i == 0 ? 0 : -1;
-    const int max_row = j < (in->norm_height - 1) ? 2 : 1;
+    const int max_row = i < (in->norm_height - 1) ? 2 : 1;
     
-    const int max_col = i < (in->header.width_px - 1) ? 2 : 1;
+    const int max_col = j < (abs(in->header.width_px) - 1) ? 2 : 1;
+    const int init_col = j == 0 ? 0 : -1;
+    
     for (; row < max_row; row++) {
-        int col = j == 0 ? 0 : -1;
-        for (; col < max_col; col++) {
+        for (int col = init_col; col < max_col; col++) {
+            tprintf(" { i: %d, j: %d } [ r: %d, c: %d] row_offset: %d  => max_offset: %d | col_offset: %d => max_offset: %d\n", i, j, i+row, i+col, row, max_row-1, col, max_col-1);
             switch(channel){ 
                 case BLUE:
                 target[row + 1][col + 1] = in->pixels[i + row][j + col].blue;
@@ -292,7 +294,7 @@ void *filterThreadWorker(void * args) {
     // BMP_Image *target = settings.dest;
     // Pixel **source = settings.src->pixels;
     const int START_ROW = settings.init_row;
-    const int END_ROW = min(START_ROW + settings.row_count, );
+    const int END_ROW = min(START_ROW + settings.row_count, settings.src->norm_height);
     // const double factor = settings.factor;
 
 
